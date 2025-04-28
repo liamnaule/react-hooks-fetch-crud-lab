@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 function QuestionForm(props) {
   const [formData, setFormData] = useState({
@@ -7,11 +7,18 @@ function QuestionForm(props) {
     answer2: "",
     answer3: "",
     answer4: "",
-    correctIndex: 0,  
+    correctIndex: 0,
   });
 
+  const isMounted = useRef(true); // <-- create a ref to track mount status
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false; // when unmounting, set it to false
+    };
+  }, []);
+
   function handleChange(event) {
-    // updating the right input in the state
     setFormData({
       ...formData,
       [event.target.name]: event.target.value,
@@ -21,7 +28,6 @@ function QuestionForm(props) {
   function handleSubmit(event) {
     event.preventDefault();
 
-    // placed answers into one array 
     const answers = [
       formData.answer1,
       formData.answer2,
@@ -29,7 +35,6 @@ function QuestionForm(props) {
       formData.answer4,
     ];
 
-    // Ensure the correctIndex is a number, not a string --->parsing it as int
     const correctIndex = parseInt(formData.correctIndex, 10);
 
     fetch("http://localhost:4000/questions", {
@@ -40,23 +45,27 @@ function QuestionForm(props) {
       body: JSON.stringify({
         prompt: formData.prompt,
         answers: answers,
-        correctIndex: correctIndex, 
+        correctIndex: correctIndex,
       }),
     })
       .then((response) => response.json())
       .then((data) => {
-        setFormData({
-          prompt: "",
-          answer1: "",
-          answer2: "",
-          answer3: "",
-          answer4: "",
-          correctIndex: 0,
-        });
-        console.log('Response:', data);
+        if (isMounted.current) { // <-- only update state if still mounted
+          setFormData({
+            prompt: "",
+            answer1: "",
+            answer2: "",
+            answer3: "",
+            answer4: "",
+            correctIndex: 0,
+          });
+          console.log('Response:', data);
+        }
       })
       .catch((error) => {
-        console.error("Error:", error);
+        if (isMounted.current) { // optional: only log if mounted
+          console.error("Error:", error);
+        }
       });
   }
 
@@ -64,6 +73,7 @@ function QuestionForm(props) {
     <section>
       <h1>New Question</h1>
       <form onSubmit={handleSubmit}>
+        {/* your form fields */}
         <label>
           Prompt:
           <input
@@ -129,3 +139,4 @@ function QuestionForm(props) {
 }
 
 export default QuestionForm;
+
